@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Three call activities of different shapes: a version-pinned call, a multi-instance call
+     that fans out over a collection, and one buried inside a subprocess. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Defs_triage" targetNamespace="http://acme.com/claims"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:process id="claim-triage" name="Claim Triage" isExecutable="true">
+    <bpmn:startEvent id="Start_Triage">
+      <bpmn:outgoing>T1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="T1" sourceRef="Start_Triage" targetRef="Rule_Severity" />
+
+    <bpmn:businessRuleTask id="Rule_Severity" name="Determine severity"
+                           camunda:decisionRef="triage-severity"
+                           camunda:resultVariable="severity">
+      <bpmn:incoming>T1</bpmn:incoming>
+      <bpmn:outgoing>T2</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="T2" sourceRef="Rule_Severity" targetRef="CallActivity_Docs" />
+
+    <!-- Multi-instance: one child instance per document in the collection. -->
+    <bpmn:callActivity id="CallActivity_Docs" name="Verify each document"
+                       calledElement="document-verification"
+                       camunda:calledElementBinding="latest">
+      <bpmn:extensionElements>
+        <camunda:in source="document" target="document" />
+        <camunda:out source="verificationResult" target="verificationResult" />
+      </bpmn:extensionElements>
+      <bpmn:multiInstanceLoopCharacteristics isSequential="false"
+                                             camunda:collection="${documents}"
+                                             camunda:elementVariable="document" />
+      <bpmn:incoming>T2</bpmn:incoming>
+      <bpmn:outgoing>T3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="T3" sourceRef="CallActivity_Docs" targetRef="CallActivity_Fraud" />
+
+    <!-- version binding: pinned to version 3 and will not follow later deployments. -->
+    <bpmn:callActivity id="CallActivity_Fraud" name="Investigate fraud"
+                       calledElement="fraud-investigation"
+                       camunda:calledElementBinding="version"
+                       camunda:calledElementVersion="3">
+      <bpmn:incoming>T3</bpmn:incoming>
+      <bpmn:outgoing>T4</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="T4" sourceRef="CallActivity_Fraud" targetRef="SubProcess_Comms" />
+
+    <bpmn:subProcess id="SubProcess_Comms" name="Communications">
+      <bpmn:incoming>T4</bpmn:incoming>
+      <bpmn:outgoing>T5</bpmn:outgoing>
+      <bpmn:startEvent id="Start_Comms">
+        <bpmn:outgoing>C1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="C1" sourceRef="Start_Comms" targetRef="CallActivity_NotifyTriage" />
+      <!-- Nested one scope deep: the dependency most tools miss. -->
+      <bpmn:callActivity id="CallActivity_NotifyTriage" name="Notify claimant"
+                         calledElement="customer-notification">
+        <bpmn:incoming>C1</bpmn:incoming>
+        <bpmn:outgoing>C2</bpmn:outgoing>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="C2" sourceRef="CallActivity_NotifyTriage" targetRef="End_Comms" />
+      <bpmn:endEvent id="End_Comms">
+        <bpmn:incoming>C2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="T5" sourceRef="SubProcess_Comms" targetRef="End_Triage" />
+    <bpmn:endEvent id="End_Triage" name="Triaged">
+      <bpmn:incoming>T5</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="DI_diagram_claim-triage">
+    <bpmndi:BPMNPlane id="DI_plane_claim-triage" bpmnElement="claim-triage">
+      <bpmndi:BPMNShape id="DI_CallActivity_Docs" bpmnElement="CallActivity_Docs">
+        <dc:Bounds x="316" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_CallActivity_Fraud" bpmnElement="CallActivity_Fraud">
+        <dc:Bounds x="476" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Triage" bpmnElement="End_Triage">
+        <dc:Bounds x="1168" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Rule_Severity" bpmnElement="Rule_Severity">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Triage" bpmnElement="Start_Triage">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_SubProcess_Comms" bpmnElement="SubProcess_Comms" isExpanded="true">
+        <dc:Bounds x="636" y="60" width="472" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_CallActivity_NotifyTriage" bpmnElement="CallActivity_NotifyTriage">
+        <dc:Bounds x="822" y="150" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Comms" bpmnElement="End_Comms">
+        <dc:Bounds x="982" y="150" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Comms" bpmnElement="Start_Comms">
+        <dc:Bounds x="726" y="150" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_T1" bpmnElement="T1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_T2" bpmnElement="T2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="316" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_T3" bpmnElement="T3">
+        <di:waypoint x="416" y="100" />
+        <di:waypoint x="476" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_T4" bpmnElement="T4">
+        <di:waypoint x="576" y="100" />
+        <di:waypoint x="606" y="100" />
+        <di:waypoint x="606" y="190" />
+        <di:waypoint x="636" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_T5" bpmnElement="T5">
+        <di:waypoint x="1108" y="190" />
+        <di:waypoint x="1138" y="190" />
+        <di:waypoint x="1138" y="78" />
+        <di:waypoint x="1168" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_C1" bpmnElement="C1">
+        <di:waypoint x="762" y="168" />
+        <di:waypoint x="792" y="168" />
+        <di:waypoint x="792" y="190" />
+        <di:waypoint x="822" y="190" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_C2" bpmnElement="C2">
+        <di:waypoint x="922" y="190" />
+        <di:waypoint x="952" y="190" />
+        <di:waypoint x="952" y="168" />
+        <di:waypoint x="982" y="168" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

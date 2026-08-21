@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A decision chain three deep. triage-severity depends on two decisions, one of which
+     depends on a third, so the graph continues well past the BPMN layer. -->
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/"
+             xmlns:camunda="http://camunda.org/schema/1.0/dmn"
+             id="Defs_claim_decisions" name="Claim decisions"
+             namespace="http://acme.com/dmn/claims">
+
+  <decision id="intake-eligibility" name="Intake eligibility">
+    <informationRequirement id="ir_elig_policy">
+      <requiredDecision href="#policy-status" />
+    </informationRequirement>
+    <decisionTable id="dt_elig" hitPolicy="UNIQUE" />
+  </decision>
+
+  <decision id="triage-severity" name="Triage severity">
+    <informationRequirement id="ir_sev_fraud">
+      <requiredDecision href="#fraud-score" />
+    </informationRequirement>
+    <informationRequirement id="ir_sev_policy">
+      <requiredDecision href="#policy-status" />
+    </informationRequirement>
+    <decisionTable id="dt_sev" hitPolicy="FIRST" />
+  </decision>
+
+  <decision id="fraud-score" name="Fraud score">
+    <informationRequirement id="ir_fraud_history">
+      <requiredDecision href="#claim-history" />
+    </informationRequirement>
+    <decisionTable id="dt_fraud" hitPolicy="COLLECT" />
+  </decision>
+
+  <decision id="policy-status" name="Policy status">
+    <decisionTable id="dt_policy" hitPolicy="UNIQUE" />
+  </decision>
+
+  <decision id="claim-history" name="Claim history">
+    <decisionTable id="dt_history" hitPolicy="UNIQUE" />
+  </decision>
+</definitions>

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Entry point of the estate. Nothing calls this. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Defs_intake" targetNamespace="http://acme.com/claims"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:process id="claim-intake" name="Claim Intake" isExecutable="true"
+                camunda:historyTimeToLive="180">
+    <bpmn:startEvent id="Start_Claim" name="Claim received">
+      <bpmn:outgoing>F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Claim" targetRef="Rule_Eligibility" />
+
+    <bpmn:businessRuleTask id="Rule_Eligibility" name="Check eligibility"
+                           camunda:decisionRef="intake-eligibility"
+                           camunda:decisionRefBinding="deployment"
+                           camunda:resultVariable="eligibility">
+      <bpmn:incoming>F1</bpmn:incoming>
+      <bpmn:outgoing>F2</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="F2" sourceRef="Rule_Eligibility" targetRef="Gate_Eligible" />
+
+    <bpmn:exclusiveGateway id="Gate_Eligible" name="Eligible?" default="F_Reject">
+      <bpmn:incoming>F2</bpmn:incoming>
+      <bpmn:outgoing>F3</bpmn:outgoing>
+      <bpmn:outgoing>F_Reject</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:sequenceFlow id="F3" sourceRef="Gate_Eligible" targetRef="CallActivity_Triage">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${eligibility == 'YES'}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="F_Reject" sourceRef="Gate_Eligible" targetRef="End_Rejected" />
+
+    <!-- deployment binding: pins to the version deployed alongside this one -->
+    <bpmn:callActivity id="CallActivity_Triage" name="Triage the claim"
+                       calledElement="claim-triage"
+                       camunda:calledElementBinding="deployment">
+      <bpmn:extensionElements>
+        <camunda:in source="claimId" target="claimId" />
+        <camunda:in source="policyNumber" target="policyNumber" />
+        <camunda:out source="triageOutcome" target="triageOutcome" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>F3</bpmn:incoming>
+      <bpmn:outgoing>F4</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="F4" sourceRef="CallActivity_Triage" targetRef="End_Done" />
+
+    <bpmn:endEvent id="End_Done" name="Intake complete">
+      <bpmn:incoming>F4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Rejected" name="Rejected">
+      <bpmn:incoming>F_Reject</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="DI_diagram_claim-intake">
+    <bpmndi:BPMNPlane id="DI_plane_claim-intake" bpmnElement="claim-intake">
+      <bpmndi:BPMNShape id="DI_CallActivity_Triage" bpmnElement="CallActivity_Triage">
+        <dc:Bounds x="426" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Done" bpmnElement="End_Done">
+        <dc:Bounds x="586" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Rejected" bpmnElement="End_Rejected">
+        <dc:Bounds x="458" y="180" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Gate_Eligible" bpmnElement="Gate_Eligible">
+        <dc:Bounds x="316" y="60" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Rule_Eligibility" bpmnElement="Rule_Eligibility">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Claim" bpmnElement="Start_Claim">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_F1" bpmnElement="F1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_F2" bpmnElement="F2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="286" y="100" />
+        <di:waypoint x="286" y="85" />
+        <di:waypoint x="316" y="85" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_F3" bpmnElement="F3">
+        <di:waypoint x="366" y="85" />
+        <di:waypoint x="396" y="85" />
+        <di:waypoint x="396" y="100" />
+        <di:waypoint x="426" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_F_Reject" bpmnElement="F_Reject">
+        <di:waypoint x="366" y="85" />
+        <di:waypoint x="412" y="85" />
+        <di:waypoint x="412" y="198" />
+        <di:waypoint x="458" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_F4" bpmnElement="F4">
+        <di:waypoint x="526" y="100" />
+        <di:waypoint x="556" y="100" />
+        <di:waypoint x="556" y="78" />
+        <di:waypoint x="586" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

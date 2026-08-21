@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Uses the older DMN 1.1 namespace, as an estate with files of different ages would. -->
+<definitions xmlns="http://www.omg.org/spec/DMN/20151101/dmn.xsd"
+             id="Defs_settlement_decisions" name="Settlement decisions"
+             namespace="http://acme.com/dmn/settlement">
+
+  <decision id="settlement-authority" name="Settlement authority">
+    <informationRequirement>
+      <requiredDecision href="#payout-band" />
+    </informationRequirement>
+    <decisionTable id="dt_authority" hitPolicy="UNIQUE" />
+  </decision>
+
+  <decision id="payout-band" name="Payout band">
+    <decisionTable id="dt_band" hitPolicy="UNIQUE" />
+  </decision>
+</definitions>

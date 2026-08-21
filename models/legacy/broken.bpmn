@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">
+  <bpmn:process id="never-parsed" name="Truncated on export">
+    <bpmn:startEvent id="Start_Broken">

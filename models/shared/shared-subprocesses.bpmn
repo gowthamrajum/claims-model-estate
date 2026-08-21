@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Four processes in a single file, which the scanner must treat as four separate keys.
+     escalation-review calls claim-triage, an ancestor, closing a cycle through the estate. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Defs_shared" targetNamespace="http://acme.com/claims"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+
+  <bpmn:process id="ocr-extraction" name="OCR Extraction" isExecutable="true">
+    <bpmn:startEvent id="Start_Ocr"><bpmn:outgoing>O1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="O1" sourceRef="Start_Ocr" targetRef="Service_Ocr" />
+    <bpmn:serviceTask id="Service_Ocr" name="Run OCR"
+                      camunda:type="external" camunda:topic="ocr-run">
+      <bpmn:incoming>O1</bpmn:incoming>
+      <bpmn:outgoing>O2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="O2" sourceRef="Service_Ocr" targetRef="End_Ocr" />
+    <bpmn:endEvent id="End_Ocr"><bpmn:incoming>O2</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+
+  <bpmn:process id="manual-document-review" name="Manual Document Review" isExecutable="true">
+    <bpmn:startEvent id="Start_Mdr"><bpmn:outgoing>M1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="M1" sourceRef="Start_Mdr" targetRef="Task_Read" />
+    <bpmn:userTask id="Task_Read" name="Read the document"
+                   camunda:candidateGroups="claims-back-office">
+      <bpmn:incoming>M1</bpmn:incoming>
+      <bpmn:outgoing>M2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="M2" sourceRef="Task_Read" targetRef="End_Mdr" />
+    <bpmn:endEvent id="End_Mdr"><bpmn:incoming>M2</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+
+  <bpmn:process id="escalation-review" name="Escalation Review" isExecutable="true">
+    <bpmn:startEvent id="Start_Esc"><bpmn:outgoing>E1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="E1" sourceRef="Start_Esc" targetRef="Task_Escalate" />
+    <bpmn:userTask id="Task_Escalate" name="Senior review"
+                   camunda:candidateGroups="claims-seniors">
+      <bpmn:incoming>E1</bpmn:incoming>
+      <bpmn:outgoing>E2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="E2" sourceRef="Task_Escalate" targetRef="CallActivity_Reopen" />
+    <!-- Calls back to an ancestor: the estate contains a genuine cycle. -->
+    <bpmn:callActivity id="CallActivity_Reopen" name="Reopen triage"
+                       calledElement="claim-triage">
+      <bpmn:incoming>E2</bpmn:incoming>
+      <bpmn:outgoing>E3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="E3" sourceRef="CallActivity_Reopen" targetRef="End_Esc" />
+    <bpmn:endEvent id="End_Esc"><bpmn:incoming>E3</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+
+  <bpmn:process id="external-agency-check" name="External Agency Check" isExecutable="true">
+    <bpmn:startEvent id="Start_Agency"><bpmn:outgoing>A1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:sequenceFlow id="A1" sourceRef="Start_Agency" targetRef="Service_Agency" />
+    <bpmn:serviceTask id="Service_Agency" name="Query agency"
+                      camunda:type="external" camunda:topic="agency-query">
+      <bpmn:incoming>A1</bpmn:incoming>
+      <bpmn:outgoing>A2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="A2" sourceRef="Service_Agency" targetRef="End_Agency" />
+    <bpmn:endEvent id="End_Agency"><bpmn:incoming>A2</bpmn:incoming></bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="DI_diagram_ocr-extraction">
+    <bpmndi:BPMNPlane id="DI_plane_ocr-extraction" bpmnElement="ocr-extraction">
+      <bpmndi:BPMNShape id="DI_End_Ocr" bpmnElement="End_Ocr">
+        <dc:Bounds x="316" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Service_Ocr" bpmnElement="Service_Ocr">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Ocr" bpmnElement="Start_Ocr">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_O1" bpmnElement="O1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_O2" bpmnElement="O2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="286" y="100" />
+        <di:waypoint x="286" y="78" />
+        <di:waypoint x="316" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="DI_diagram_manual-document-review">
+    <bpmndi:BPMNPlane id="DI_plane_manual-document-review" bpmnElement="manual-document-review">
+      <bpmndi:BPMNShape id="DI_End_Mdr" bpmnElement="End_Mdr">
+        <dc:Bounds x="316" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Mdr" bpmnElement="Start_Mdr">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Task_Read" bpmnElement="Task_Read">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_M1" bpmnElement="M1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_M2" bpmnElement="M2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="286" y="100" />
+        <di:waypoint x="286" y="78" />
+        <di:waypoint x="316" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="DI_diagram_escalation-review">
+    <bpmndi:BPMNPlane id="DI_plane_escalation-review" bpmnElement="escalation-review">
+      <bpmndi:BPMNShape id="DI_CallActivity_Reopen" bpmnElement="CallActivity_Reopen">
+        <dc:Bounds x="316" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Esc" bpmnElement="End_Esc">
+        <dc:Bounds x="476" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Esc" bpmnElement="Start_Esc">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Task_Escalate" bpmnElement="Task_Escalate">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_E1" bpmnElement="E1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_E2" bpmnElement="E2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="316" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_E3" bpmnElement="E3">
+        <di:waypoint x="416" y="100" />
+        <di:waypoint x="446" y="100" />
+        <di:waypoint x="446" y="78" />
+        <di:waypoint x="476" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="DI_diagram_external-agency-check">
+    <bpmndi:BPMNPlane id="DI_plane_external-agency-check" bpmnElement="external-agency-check">
+      <bpmndi:BPMNShape id="DI_End_Agency" bpmnElement="End_Agency">
+        <dc:Bounds x="316" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Service_Agency" bpmnElement="Service_Agency">
+        <dc:Bounds x="156" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Agency" bpmnElement="Start_Agency">
+        <dc:Bounds x="60" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_A1" bpmnElement="A1">
+        <di:waypoint x="96" y="78" />
+        <di:waypoint x="126" y="78" />
+        <di:waypoint x="126" y="100" />
+        <di:waypoint x="156" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_A2" bpmnElement="A2">
+        <di:waypoint x="256" y="100" />
+        <di:waypoint x="286" y="100" />
+        <di:waypoint x="286" y="78" />
+        <di:waypoint x="316" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

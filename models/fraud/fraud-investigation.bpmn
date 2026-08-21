@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Called from two different parents. Holds a call activity inside an event subprocess,
+     which only runs when an error is thrown, and which calls back up the tree. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Defs_fraud" targetNamespace="http://acme.com/claims"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:error id="Err_Suspicious" name="SuspiciousClaim" errorCode="FRAUD_SUSPECT" />
+
+  <bpmn:process id="fraud-investigation" name="Fraud Investigation" isExecutable="true">
+    <bpmn:startEvent id="Start_Fraud">
+      <bpmn:outgoing>FR1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="FR1" sourceRef="Start_Fraud" targetRef="Rule_FraudScore" />
+
+    <bpmn:businessRuleTask id="Rule_FraudScore" name="Score the claim"
+                           camunda:decisionRef="fraud-score"
+                           camunda:decisionRefBinding="latest"
+                           camunda:resultVariable="fraudScore">
+      <bpmn:incoming>FR1</bpmn:incoming>
+      <bpmn:outgoing>FR2</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sequenceFlow id="FR2" sourceRef="Rule_FraudScore" targetRef="CallActivity_Agency" />
+
+    <!-- latest binding: always follows the newest deployed version of the callee. -->
+    <bpmn:callActivity id="CallActivity_Agency" name="External agency check"
+                       calledElement="external-agency-check"
+                       camunda:calledElementBinding="latest">
+      <bpmn:incoming>FR2</bpmn:incoming>
+      <bpmn:outgoing>FR3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="FR3" sourceRef="CallActivity_Agency" targetRef="End_Fraud" />
+
+    <bpmn:endEvent id="End_Fraud" name="Investigated">
+      <bpmn:incoming>FR3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Event subprocess: reachable only on error, and it calls a process that reopens
+         triage, closing a loop back up the call tree. -->
+    <bpmn:subProcess id="EventSub_Suspicious" name="Suspicious claim handler" triggeredByEvent="true">
+      <bpmn:startEvent id="Start_Suspicious" name="Suspicious">
+        <bpmn:errorEventDefinition id="ErrDef_Suspicious" errorRef="Err_Suspicious" />
+        <bpmn:outgoing>S1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sequenceFlow id="S1" sourceRef="Start_Suspicious" targetRef="CallActivity_Escalate" />
+      <bpmn:callActivity id="CallActivity_Escalate" name="Escalate for review"
+                         calledElement="escalation-review">
+        <bpmn:incoming>S1</bpmn:incoming>
+        <bpmn:outgoing>S2</bpmn:outgoing>
+      </bpmn:callActivity>
+      <bpmn:sequenceFlow id="S2" sourceRef="CallActivity_Escalate" targetRef="End_Suspicious" />
+      <bpmn:endEvent id="End_Suspicious">
+        <bpmn:incoming>S2</bpmn:incoming>
+      </bpmn:endEvent>
+    </bpmn:subProcess>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="DI_diagram_fraud-investigation">
+    <bpmndi:BPMNPlane id="DI_plane_fraud-investigation" bpmnElement="fraud-investigation">
+      <bpmndi:BPMNShape id="DI_CallActivity_Agency" bpmnElement="CallActivity_Agency">
+        <dc:Bounds x="752" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Fraud" bpmnElement="End_Fraud">
+        <dc:Bounds x="912" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_EventSub_Suspicious" bpmnElement="EventSub_Suspicious" isExpanded="true">
+        <dc:Bounds x="60" y="136" width="472" height="260" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_CallActivity_Escalate" bpmnElement="CallActivity_Escalate">
+        <dc:Bounds x="246" y="226" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Suspicious" bpmnElement="End_Suspicious">
+        <dc:Bounds x="406" y="226" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Suspicious" bpmnElement="Start_Suspicious">
+        <dc:Bounds x="150" y="226" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Rule_FraudScore" bpmnElement="Rule_FraudScore">
+        <dc:Bounds x="592" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Fraud" bpmnElement="Start_Fraud">
+        <dc:Bounds x="278" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_FR1" bpmnElement="FR1">
+        <di:waypoint x="314" y="78" />
+        <di:waypoint x="453" y="78" />
+        <di:waypoint x="453" y="100" />
+        <di:waypoint x="592" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_FR2" bpmnElement="FR2">
+        <di:waypoint x="692" y="100" />
+        <di:waypoint x="752" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_FR3" bpmnElement="FR3">
+        <di:waypoint x="852" y="100" />
+        <di:waypoint x="882" y="100" />
+        <di:waypoint x="882" y="78" />
+        <di:waypoint x="912" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_S1" bpmnElement="S1">
+        <di:waypoint x="186" y="244" />
+        <di:waypoint x="216" y="244" />
+        <di:waypoint x="216" y="266" />
+        <di:waypoint x="246" y="266" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_S2" bpmnElement="S2">
+        <di:waypoint x="346" y="266" />
+        <di:waypoint x="376" y="266" />
+        <di:waypoint x="376" y="244" />
+        <di:waypoint x="406" y="244" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

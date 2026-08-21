@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Invoked as a multi-instance child, so one claim can produce many live instances of it.
+     Carries a boundary error event on a call activity, which routes to another call. -->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:camunda="http://camunda.org/schema/1.0/bpmn"
+                  id="Defs_docs" targetNamespace="http://acme.com/claims"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
+  <bpmn:error id="Err_Unreadable" name="Unreadable" errorCode="OCR_FAILED" />
+
+  <bpmn:process id="document-verification" name="Document Verification" isExecutable="true">
+    <bpmn:startEvent id="Start_Doc">
+      <bpmn:outgoing>D1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="D1" sourceRef="Start_Doc" targetRef="CallActivity_OCR" />
+
+    <bpmn:callActivity id="CallActivity_OCR" name="Extract text"
+                       calledElement="ocr-extraction">
+      <bpmn:incoming>D1</bpmn:incoming>
+      <bpmn:outgoing>D2</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="D2" sourceRef="CallActivity_OCR" targetRef="End_Doc" />
+
+    <!-- When extraction fails the token leaves the call activity here and a human takes over. -->
+    <bpmn:boundaryEvent id="Boundary_Unreadable" name="Unreadable" attachedToRef="CallActivity_OCR">
+      <bpmn:errorEventDefinition id="ErrDef_Unreadable" errorRef="Err_Unreadable" />
+      <bpmn:outgoing>D3</bpmn:outgoing>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="D3" sourceRef="Boundary_Unreadable" targetRef="CallActivity_ManualDoc" />
+
+    <bpmn:callActivity id="CallActivity_ManualDoc" name="Manual document review"
+                       calledElement="manual-document-review">
+      <bpmn:incoming>D3</bpmn:incoming>
+      <bpmn:outgoing>D4</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:sequenceFlow id="D4" sourceRef="CallActivity_ManualDoc" targetRef="End_Doc" />
+
+    <bpmn:endEvent id="End_Doc" name="Verified">
+      <bpmn:incoming>D2</bpmn:incoming>
+      <bpmn:incoming>D4</bpmn:incoming>
+    </bpmn:endEvent>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="DI_diagram_document-verification">
+    <bpmndi:BPMNPlane id="DI_plane_document-verification" bpmnElement="document-verification">
+      <bpmndi:BPMNShape id="DI_Boundary_Unreadable" bpmnElement="Boundary_Unreadable">
+        <dc:Bounds x="274" y="122" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_CallActivity_ManualDoc" bpmnElement="CallActivity_ManualDoc">
+        <dc:Bounds x="60" y="136" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_CallActivity_OCR" bpmnElement="CallActivity_OCR">
+        <dc:Bounds x="220" y="60" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_End_Doc" bpmnElement="End_Doc">
+        <dc:Bounds x="380" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="DI_Start_Doc" bpmnElement="Start_Doc">
+        <dc:Bounds x="92" y="60" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="DI_D1" bpmnElement="D1">
+        <di:waypoint x="128" y="78" />
+        <di:waypoint x="174" y="78" />
+        <di:waypoint x="174" y="100" />
+        <di:waypoint x="220" y="100" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_D2" bpmnElement="D2">
+        <di:waypoint x="320" y="100" />
+        <di:waypoint x="350" y="100" />
+        <di:waypoint x="350" y="78" />
+        <di:waypoint x="380" y="78" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_D3" bpmnElement="D3">
+        <di:waypoint x="292" y="158" />
+        <di:waypoint x="292" y="198" />
+        <di:waypoint x="60" y="198" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DI_D4" bpmnElement="D4">
+        <di:waypoint x="160" y="176" />
+        <di:waypoint x="270" y="176" />
+        <di:waypoint x="270" y="78" />
+        <di:waypoint x="380" y="78" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
