@@ -22,13 +22,29 @@
       <bpmn:incoming>FR1</bpmn:incoming>
       <bpmn:outgoing>FR2</bpmn:outgoing>
     </bpmn:businessRuleTask>
-    <bpmn:sequenceFlow id="FR2" sourceRef="Rule_FraudScore" targetRef="CallActivity_Agency" />
+    <bpmn:sequenceFlow id="FR2" sourceRef="Rule_FraudScore" targetRef="Script_Weight" />
+
+    <!-- Three ways of naming a variable in one script: a named call, a bare assignment that
+         writes through the binding into the process, and a def that stays inside. -->
+    <bpmn:scriptTask id="Script_Weight" name="Weight the score" scriptFormat="groovy">
+      <bpmn:incoming>FR2</bpmn:incoming>
+      <bpmn:outgoing>FR2b</bpmn:outgoing>
+      <bpmn:script><![CDATA[
+        def multiplier = priorClaimCount > 3 ? 2.0 : 1.0   // local; the process never sees it
+        weightedScore = fraudScore * multiplier            // reaches the process scope
+        execution.setVariable("fraudBand", weightedScore > 70 ? "HIGH" : "LOW")
+        if (execution.getVariable("policyNumber") == null) {
+          execution.setVariable("scoreWarning", "no policy on file")
+        }
+      ]]></bpmn:script>
+    </bpmn:scriptTask>
+    <bpmn:sequenceFlow id="FR2b" sourceRef="Script_Weight" targetRef="CallActivity_Agency" />
 
     <!-- latest binding: always follows the newest deployed version of the callee. -->
     <bpmn:callActivity id="CallActivity_Agency" name="External agency check"
                        calledElement="external-agency-check"
                        camunda:calledElementBinding="latest">
-      <bpmn:incoming>FR2</bpmn:incoming>
+      <bpmn:incoming>FR2b</bpmn:incoming>
       <bpmn:outgoing>FR3</bpmn:outgoing>
     </bpmn:callActivity>
     <bpmn:sequenceFlow id="FR3" sourceRef="CallActivity_Agency" targetRef="End_Fraud" />

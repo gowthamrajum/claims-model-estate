@@ -9,6 +9,14 @@
                   xmlns:di="http://www.omg.org/spec/DD/20100524/DI">
   <bpmn:process id="claim-intake" name="Claim Intake" isExecutable="true"
                 camunda:historyTimeToLive="180">
+    <bpmn:extensionElements>
+      <camunda:executionListener event="start">
+        <camunda:script scriptFormat="groovy">
+          execution.setVariable("intakeChannel", "web")
+          receivedAt = new Date()
+        </camunda:script>
+      </camunda:executionListener>
+    </bpmn:extensionElements>
     <bpmn:startEvent id="Start_Claim" name="Claim received">
       <bpmn:extensionElements>
         <camunda:formData>

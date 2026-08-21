@@ -54,6 +54,12 @@
         <camunda:formData>
           <camunda:formField id="escalationDecision" label="Decision" type="enum" />
         </camunda:formData>
+        <camunda:taskListener event="complete">
+          <camunda:script scriptFormat="javascript">
+            var reviewedBy = task.getAssignee();
+            execution.setVariable("escalationClosedBy", reviewedBy);
+          </camunda:script>
+        </camunda:taskListener>
       </bpmn:extensionElements>
       <bpmn:incoming>E1</bpmn:incoming>
       <bpmn:outgoing>E2</bpmn:outgoing>
@@ -81,6 +87,11 @@
       <bpmn:extensionElements>
         <camunda:inputOutput>
           <camunda:inputParameter name="policyNumber">${policyNumber}</camunda:inputParameter>
+          <camunda:inputParameter name="agencyQuery">
+            <camunda:script scriptFormat="groovy">
+              [reference: claimId, since: incidentDate]
+            </camunda:script>
+          </camunda:inputParameter>
           <camunda:outputParameter name="agencyReport">${response.body}</camunda:outputParameter>
         </camunda:inputOutput>
       </bpmn:extensionElements>
