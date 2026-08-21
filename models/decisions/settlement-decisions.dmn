@@ -8,10 +8,20 @@
     <informationRequirement>
       <requiredDecision href="#payout-band" />
     </informationRequirement>
-    <decisionTable id="dt_authority" hitPolicy="UNIQUE" />
+    <decisionTable id="dt_authority" hitPolicy="UNIQUE">
+      <input id="in_auth_band" label="Payout band">
+        <inputExpression id="ie_auth_band" typeRef="string">payoutBand</inputExpression>
+      </input>
+      <output id="out_auth" name="authority" label="Approver" typeRef="string" />
+    </decisionTable>
   </decision>
 
   <decision id="payout-band" name="Payout band">
-    <decisionTable id="dt_band" hitPolicy="UNIQUE" />
+    <decisionTable id="dt_band" hitPolicy="UNIQUE">
+      <input id="in_band_amount" label="Settlement amount">
+        <inputExpression id="ie_band_amount" typeRef="number">settlementAmount</inputExpression>
+      </input>
+      <output id="out_band" name="payoutBand" label="Band" typeRef="string" />
+    </decisionTable>
   </decision>
 </definitions>

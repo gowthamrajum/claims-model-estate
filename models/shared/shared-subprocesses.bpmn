@@ -13,6 +13,13 @@
     <bpmn:sequenceFlow id="O1" sourceRef="Start_Ocr" targetRef="Service_Ocr" />
     <bpmn:serviceTask id="Service_Ocr" name="Run OCR"
                       camunda:type="external" camunda:topic="ocr-run">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="scanUrl">${document.scanUrl}</camunda:inputParameter>
+          <camunda:outputParameter name="extractedText">${ocrText}</camunda:outputParameter>
+          <camunda:outputParameter name="ocrConfidence">${confidence}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>O1</bpmn:incoming>
       <bpmn:outgoing>O2</bpmn:outgoing>
     </bpmn:serviceTask>
@@ -25,6 +32,12 @@
     <bpmn:sequenceFlow id="M1" sourceRef="Start_Mdr" targetRef="Task_Read" />
     <bpmn:userTask id="Task_Read" name="Read the document"
                    camunda:candidateGroups="claims-back-office">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="documentLegible" label="Is it legible?" type="boolean" />
+          <camunda:formField id="reviewerNotes" label="Notes" type="string" />
+        </camunda:formData>
+      </bpmn:extensionElements>
       <bpmn:incoming>M1</bpmn:incoming>
       <bpmn:outgoing>M2</bpmn:outgoing>
     </bpmn:userTask>
@@ -37,6 +50,11 @@
     <bpmn:sequenceFlow id="E1" sourceRef="Start_Esc" targetRef="Task_Escalate" />
     <bpmn:userTask id="Task_Escalate" name="Senior review"
                    camunda:candidateGroups="claims-seniors">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="escalationDecision" label="Decision" type="enum" />
+        </camunda:formData>
+      </bpmn:extensionElements>
       <bpmn:incoming>E1</bpmn:incoming>
       <bpmn:outgoing>E2</bpmn:outgoing>
     </bpmn:userTask>
@@ -44,6 +62,10 @@
     <!-- Calls back to an ancestor: the estate contains a genuine cycle. -->
     <bpmn:callActivity id="CallActivity_Reopen" name="Reopen triage"
                        calledElement="claim-triage">
+      <bpmn:extensionElements>
+        <camunda:in variables="all" />
+        <camunda:out source="triageOutcome" target="reopenedOutcome" />
+      </bpmn:extensionElements>
       <bpmn:incoming>E2</bpmn:incoming>
       <bpmn:outgoing>E3</bpmn:outgoing>
     </bpmn:callActivity>
@@ -56,6 +78,12 @@
     <bpmn:sequenceFlow id="A1" sourceRef="Start_Agency" targetRef="Service_Agency" />
     <bpmn:serviceTask id="Service_Agency" name="Query agency"
                       camunda:type="external" camunda:topic="agency-query">
+      <bpmn:extensionElements>
+        <camunda:inputOutput>
+          <camunda:inputParameter name="policyNumber">${policyNumber}</camunda:inputParameter>
+          <camunda:outputParameter name="agencyReport">${response.body}</camunda:outputParameter>
+        </camunda:inputOutput>
+      </bpmn:extensionElements>
       <bpmn:incoming>A1</bpmn:incoming>
       <bpmn:outgoing>A2</bpmn:outgoing>
     </bpmn:serviceTask>

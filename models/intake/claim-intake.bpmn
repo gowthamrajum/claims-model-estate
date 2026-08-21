@@ -10,6 +10,14 @@
   <bpmn:process id="claim-intake" name="Claim Intake" isExecutable="true"
                 camunda:historyTimeToLive="180">
     <bpmn:startEvent id="Start_Claim" name="Claim received">
+      <bpmn:extensionElements>
+        <camunda:formData>
+          <camunda:formField id="claimId" label="Claim reference" type="string" />
+          <camunda:formField id="policyNumber" label="Policy number" type="string" />
+          <camunda:formField id="claimAmount" label="Amount claimed" type="long" />
+          <camunda:formField id="incidentDate" label="Date of incident" type="date" />
+        </camunda:formData>
+      </bpmn:extensionElements>
       <bpmn:outgoing>F1</bpmn:outgoing>
     </bpmn:startEvent>
     <bpmn:sequenceFlow id="F1" sourceRef="Start_Claim" targetRef="Rule_Eligibility" />
